@@ -1,21 +1,44 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
+import { createClient } from '@supabase/supabase-js'
+
+const SUPABASE_KEY = 'YOUR KEY';
+const SUPABASE_URL = 'YOUR URL';
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default function ChatPage() {
     const [message, setMessage] = React.useState("");
     const [messageList, setMessageList] = React.useState([]);
 
+    React.useEffect(() => {
+        supabaseClient
+            .from('messages')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(({ data }) => {
+                setMessageList(data);
+            });
+    }, []);
+
     const HadleNewMessage = (newMessage) => {
         const message = {
-            id: messageList.length + 1,
-            from: 'Leo Barreto',
-            text: newMessage
+            // id: messageList.length + 1,
+            from_user: 'omariosouto',
+            msg_text: newMessage
         };
-        setMessageList([
-            message,
-            ...messageList,
-        ]);
+
+        supabaseClient
+            .from('messages')
+            .insert([
+                message
+            ])
+            .then(({ data }) => {
+                setMessageList([
+                    data[0],
+                    ...messageList,
+                ]);
+            });
         setMessage('');
     }
 
@@ -164,10 +187,10 @@ function MessageList(props) {
                                     display: 'inline-block',
                                     marginRight: '8px',
                                 }}
-                                src={`https://github.com/LeoBarretocoder.png`}
+                                src={`https://github.com/${message.from_user}.png`}
                             />
                             <Text tag="strong">
-                                {message.from}
+                                {message.from_user}
                             </Text>
                             <Text
                                 styleSheet={{
@@ -180,7 +203,7 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {message.text}
+                        {message.msg_text}
                     </Text>
                 );
             })}
