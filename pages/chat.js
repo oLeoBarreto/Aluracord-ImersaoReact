@@ -1,13 +1,26 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/router';
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
 
-const SUPABASE_KEY = 'YOUR KEY';
-const SUPABASE_URL = 'YOUR URL';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMzMDcyMSwiZXhwIjoxOTU4OTA2NzIxfQ.NGdsUNefYefYvoUEU4-9JBAD6VYSELZT_S38_1h2PRY';
+const SUPABASE_URL = 'https://ttosvowhjpgjdptstfza.supabase.co';
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+function listnerMessage(addMessage) {
+    return supabaseClient
+        .from('messages')
+        .on('INSERT', (response) => {
+            addMessage(response.new);
+        })
+        .subscribe();
+}
+
 export default function ChatPage() {
+    const route = useRouter();
+    const logUser = route.query.username;
     const [message, setMessage] = React.useState("");
     const [messageList, setMessageList] = React.useState([]);
 
@@ -19,12 +32,21 @@ export default function ChatPage() {
             .then(({ data }) => {
                 setMessageList(data);
             });
+
+        listnerMessage((newMessage) => {
+            setMessageList((lasListtValue) => {
+                return [
+                    newMessage,
+                    ...lasListtValue,
+                ]
+            })
+        });
     }, []);
 
     const HadleNewMessage = (newMessage) => {
         const message = {
             // id: messageList.length + 1,
-            from_user: 'omariosouto',
+            from_user: logUser,
             msg_text: newMessage
         };
 
@@ -34,10 +56,7 @@ export default function ChatPage() {
                 message
             ])
             .then(({ data }) => {
-                setMessageList([
-                    data[0],
-                    ...messageList,
-                ]);
+
             });
         setMessage('');
     }
@@ -113,7 +132,24 @@ export default function ChatPage() {
                                 }
                             }}
                         />
+                        < ButtonSendSticker
+                            onStickerClick={(sticker) => {
+                                HadleNewMessage(`:sticker:${sticker}`);
+                            }}
+                        />
                         <Button
+                            styleSheet={{
+                                borderRadius: '50%',
+                                padding: '0 3px 0 0',
+                                minWidth: '50px',
+                                minHeight: '50px',
+                                fontSize: '20px',
+                                marginBottom: '8px',
+                                lineHeight: '0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
                             colorVariant="dark"
                             iconName="arrowRight"
                             onClick={(event) => {
@@ -203,7 +239,12 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {message.msg_text}
+                        {message.msg_text.startsWith(':sticker:')
+                            ? (
+                                <Image src={message.msg_text.replace(':sticker:', '')} />
+                            ) : (
+                                message.msg_text
+                            )}
                     </Text>
                 );
             })}
